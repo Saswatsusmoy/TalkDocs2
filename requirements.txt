@@ -10,3 +10,4 @@ lxml
 validators
 portia-sdk-python
 pydantic
+portia-sdk-python[google]
