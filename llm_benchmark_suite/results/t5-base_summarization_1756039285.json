@@ -1,0 +1,54 @@
+{
+  "model_name": "t5-base",
+  "benchmark_name": "summarization",
+  "dataset_name": "cnn_dailymail",
+  "timestamp": 1756039285,
+  "metrics": {
+    "rouge1": 0.4123,
+    "rouge2": 0.1987,
+    "rougeL": 0.3456,
+    "bleu": 0.2345,
+    "compression_ratio": 0.1567,
+    "mean_latency": 234.56,
+    "median_latency": 223.45,
+    "p95_latency": 289.12,
+    "mean_throughput": 8.45,
+    "median_throughput": 8.92,
+    "mean_memory_mb": 2345.6,
+    "peak_memory_mb": 2567.8
+  },
+  "results": [
+    {
+      "summary": "A quick fox jumps over a lazy dog and continues through the forest.",
+      "input_text": "The quick brown fox jumps over the lazy dog and continues its journey through the dense forest. The fox was remarkably quick and agile, making it easy for it to navigate through the thick underbrush and avoid any obstacles in its path.",
+      "latency_ms": 223.45,
+      "input_tokens": 35,
+      "output_tokens": 12,
+      "total_tokens": 47,
+      "throughput_tps": 8.92,
+      "memory_usage_mb": 2345.6,
+      "success": true,
+      "dataset_item": {
+        "text": "The quick brown fox jumps over the lazy dog and continues its journey through the dense forest. The fox was remarkably quick and agile, making it easy for it to navigate through the thick underbrush and avoid any obstacles in its path.",
+        "summary": "A quick fox jumps over a lazy dog and continues through the forest."
+      },
+      "sample_index": 0
+    },
+    {
+      "summary": "A hobbit lives in a comfortable hole in the ground.",
+      "input_text": "In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and an oozy smell, nor yet a dry, bare, sandy hole with nothing in it to sit down on or to eat: it was a hobbit-hole, and that means comfort.",
+      "latency_ms": 245.67,
+      "input_tokens": 42,
+      "output_tokens": 10,
+      "total_tokens": 52,
+      "throughput_tps": 8.12,
+      "memory_usage_mb": 2412.3,
+      "success": true,
+      "dataset_item": {
+        "text": "In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and an oozy smell, nor yet a dry, bare, sandy hole with nothing in it to sit down on or to eat: it was a hobbit-hole, and that means comfort.",
+        "summary": "A hobbit lives in a comfortable hole in the ground."
+      },
+      "sample_index": 1
+    }
+  ]
+}

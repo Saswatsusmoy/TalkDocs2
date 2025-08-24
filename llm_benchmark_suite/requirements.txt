@@ -1,0 +1,49 @@
+# LLM Benchmarking Suite Requirements
+# Core dependencies
+torch
+transformers
+datasets
+accelerate
+evaluate
+
+# HuggingFace MCP integration
+huggingface-hub
+mcp
+
+# Benchmarking and evaluation
+numpy
+pandas
+scikit-learn
+rouge-score
+sacrebleu
+
+# Web interface
+streamlit
+plotly
+dash
+dash-bootstrap-components
+
+# Database and storage
+sqlalchemy
+alembic
+
+# Utilities
+tqdm
+rich
+click
+pydantic-settings
+python-dotenv
+
+# API and networking
+requests
+aiohttp
+fastapi
+uvicorn
+
+# Logging and monitoring
+wandb
+tensorboard
+
+# Testing
+pytest
+pytest-asyncio

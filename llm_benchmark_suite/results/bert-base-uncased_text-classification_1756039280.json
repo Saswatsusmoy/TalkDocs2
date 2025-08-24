@@ -1,0 +1,49 @@
+{
+  "model_name": "bert-base-uncased",
+  "benchmark_name": "text-classification",
+  "dataset_name": "sst2",
+  "timestamp": 1756039280,
+  "metrics": {
+    "accuracy": 0.9234,
+    "f1": 0.9187,
+    "precision": 0.9256,
+    "recall": 0.9123,
+    "mean_latency": 45.67,
+    "median_latency": 43.12,
+    "p95_latency": 56.78,
+    "mean_memory_mb": 1024.5,
+    "peak_memory_mb": 1156.8
+  },
+  "results": [
+    {
+      "input_text": "I love this movie!",
+      "predicted_label": "positive",
+      "predicted_class": 1,
+      "confidence": 0.9234,
+      "probabilities": [0.0766, 0.9234],
+      "latency_ms": 43.12,
+      "memory_usage_mb": 1024.5,
+      "success": true,
+      "dataset_item": {
+        "text": "I love this movie!",
+        "label": 1
+      },
+      "sample_index": 0
+    },
+    {
+      "input_text": "This is terrible.",
+      "predicted_label": "negative",
+      "predicted_class": 0,
+      "confidence": 0.8876,
+      "probabilities": [0.8876, 0.1124],
+      "latency_ms": 47.89,
+      "memory_usage_mb": 1045.2,
+      "success": true,
+      "dataset_item": {
+        "text": "This is terrible.",
+        "label": 0
+      },
+      "sample_index": 1
+    }
+  ]
+}
