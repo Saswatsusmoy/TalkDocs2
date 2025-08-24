@@ -407,14 +407,17 @@ def crawl_website_with_portia(url):
         plan = (
             PlanBuilderV2("Crawl website and extract structured data")
             .input(name="base_url", description="The website URL to crawl")
+            .input(name="max_pages", description="Maximum number of pages to crawl")
+            .input(name="delay", description="Delay between requests in seconds")
+            .input(name="create_sitemap", description="Whether to create a sitemap")
             .invoke_tool_step(
                 step_name="Crawl Website",
                 tool="web_crawler_tool",
                 args={
                     "base_url": Input("base_url"),
-                    "max_pages": st.session_state.max_pages,
-                    "delay": st.session_state.delay,
-                    "create_sitemap": st.session_state.create_sitemap,
+                    "max_pages": Input("max_pages"),
+                    "delay": Input("delay"),
+                    "create_sitemap": Input("create_sitemap"),
                     "output_format": "json"
                 }
             )
