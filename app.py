@@ -187,14 +187,14 @@ def check_existing_data(url):
     
     for filename in os.listdir('.'):
         if filename.startswith('crawled_data_') and filename.endswith('.json'):
-    try:
-            with open(filename, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
                     if normalize_url(data.get('base_url', '')) == normalized_url:
                         return filename, data
             except:
                 continue
-        return None, None
+    return None, None
 
 def get_data_age(timestamp_str):
     """Calculate age of data"""
@@ -362,7 +362,7 @@ def load_portia_output_to_chatbot(output_filename):
                     "role": "assistant",
                     "content": f"✅ Loaded Portia AI output from {output_filename}. You can now ask questions!"
                 })
-                    st.rerun()
+                st.rerun()
                 return
         
         # If no JSON found, save the raw output as a document
@@ -380,7 +380,7 @@ def load_portia_output_to_chatbot(output_filename):
                 "role": "assistant",
                 "content": f"✅ Loaded Portia AI output from {output_filename}. You can now ask questions!"
             })
-                    st.rerun()
+            st.rerun()
     except Exception as e:
         st.session_state.messages.append({
             "role": "assistant",
@@ -517,8 +517,8 @@ def test_portia_tools():
             "content": f"❌ Portia AI tools test failed: {str(e)}"
         })
     
-                    st.rerun()
-            
+    st.rerun()
+
 # Sidebar Configuration
 with st.sidebar:
     st.markdown('<div class="sidebar-content">', unsafe_allow_html=True)
@@ -559,7 +559,7 @@ with st.sidebar:
         if st.button("Test URL Match", key="test_btn"):
             if url:
                 test_url_matching(url)
-        else:
+            else:
                 st.error("Please enter a URL")
     
     st.markdown('</div>', unsafe_allow_html=True)
@@ -584,18 +584,13 @@ with st.sidebar:
 # Main Chat Interface
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
 
-# Header with sidebar toggle
-col1, col2 = st.columns([1, 4])
-with col1:
-    if st.button("☰", help="Toggle Sidebar"):
-        st.sidebar.toggle()
-with col2:
-    st.markdown("""
-    <div class="main-header">
-        <h1>🤖 TalkDocs2</h1>
-        <p>AI-Powered Web Crawler & Document Chat</p>
-    </div>
-    """, unsafe_allow_html=True)
+# Header
+st.markdown("""
+<div class="main-header">
+    <h1>🤖 TalkDocs2</h1>
+    <p>AI-Powered Web Crawler & Document Chat</p>
+</div>
+""", unsafe_allow_html=True)
 
 # Chat Container
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
@@ -618,7 +613,7 @@ if prompt := st.chat_input("Ask me about the crawled documents..."):
     else:
         # Generate response
         with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
+            with st.spinner("Thinking..."):
                 response = st.session_state.chatbot.chat(prompt)
             st.markdown(response)
     
