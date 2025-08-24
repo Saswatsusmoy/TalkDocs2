@@ -12,50 +12,8 @@ from contextlib import redirect_stdout, redirect_stderr
 # Import custom modules
 from web_crawler import crawl_website
 from chatbot import DocumentChatbot
-
-# Try to import Portia AI modules (optional)
-try:
-    from portia_web_tools import WebCrawlerTool, WebExtractorTool, WebSitemapTool, BulkWebExtractorTool
-    from portia import Portia, PlanBuilderV2, Config, Input
-    PORTIA_AVAILABLE = True
-except ImportError as e:
-    print(f"Portia AI not available: {e}")
-    PORTIA_AVAILABLE = False
-    # Create dummy classes for compatibility
-    class WebCrawlerTool:
-        def __init__(self):
-            pass
-        def run(self, *args, **kwargs):
-            raise Exception("Portia AI is not available")
-    
-    class WebExtractorTool:
-        def __init__(self):
-            pass
-    
-    class WebSitemapTool:
-        def __init__(self):
-            pass
-    
-    class BulkWebExtractorTool:
-        def __init__(self):
-            pass
-    
-    class Portia:
-        def __init__(self, *args, **kwargs):
-            pass
-    
-    class PlanBuilderV2:
-        def __init__(self, *args, **kwargs):
-            pass
-    
-    class Config:
-        @staticmethod
-        def from_default():
-            return Config()
-    
-    class Input:
-        def __init__(self, *args, **kwargs):
-            pass
+from portia_web_tools import WebCrawlerTool, WebExtractorTool, WebSitemapTool, BulkWebExtractorTool
+from portia import Portia, PlanBuilderV2, Config, Input
 
 # Page configuration
 st.set_page_config(
@@ -229,14 +187,14 @@ def check_existing_data(url):
     
     for filename in os.listdir('.'):
         if filename.startswith('crawled_data_') and filename.endswith('.json'):
-            try:
-                with open(filename, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
+    try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                data = json.load(f)
                     if normalize_url(data.get('base_url', '')) == normalized_url:
                         return filename, data
             except:
                 continue
-    return None, None
+        return None, None
 
 def get_data_age(timestamp_str):
     """Calculate age of data"""
@@ -297,7 +255,7 @@ def crawl_website_interface(url):
     })
     
     try:
-        if st.session_state.use_portia_workflow and PORTIA_AVAILABLE:
+        if st.session_state.use_portia_workflow:
             crawl_website_with_portia(url)
         else:
             crawl_website_standard(url)
@@ -404,7 +362,7 @@ def load_portia_output_to_chatbot(output_filename):
                     "role": "assistant",
                     "content": f"✅ Loaded Portia AI output from {output_filename}. You can now ask questions!"
                 })
-                st.rerun()
+                    st.rerun()
                 return
         
         # If no JSON found, save the raw output as a document
@@ -422,7 +380,7 @@ def load_portia_output_to_chatbot(output_filename):
                 "role": "assistant",
                 "content": f"✅ Loaded Portia AI output from {output_filename}. You can now ask questions!"
             })
-            st.rerun()
+                    st.rerun()
     except Exception as e:
         st.session_state.messages.append({
             "role": "assistant",
@@ -559,8 +517,8 @@ def test_portia_tools():
             "content": f"❌ Portia AI tools test failed: {str(e)}"
         })
     
-    st.rerun()
-
+                    st.rerun()
+            
 # Sidebar Configuration
 with st.sidebar:
     st.markdown('<div class="sidebar-content">', unsafe_allow_html=True)
@@ -570,16 +528,12 @@ with st.sidebar:
     st.markdown('<div class="sidebar-title">Configuration</div>', unsafe_allow_html=True)
     
     # Workflow Selection
-    if PORTIA_AVAILABLE:
-        workflow = st.radio(
-            "Select Workflow:",
-            ["Standard Crawler", "Portia AI"],
-            index=1 if st.session_state.use_portia_workflow else 0
-        )
-        st.session_state.use_portia_workflow = (workflow == "Portia AI")
-    else:
-        st.info("Portia AI is not available. Using Standard Crawler.")
-        st.session_state.use_portia_workflow = False
+    workflow = st.radio(
+        "Select Workflow:",
+        ["Standard Crawler", "Portia AI"],
+        index=1 if st.session_state.use_portia_workflow else 0
+    )
+    st.session_state.use_portia_workflow = (workflow == "Portia AI")
     
     # Crawling Parameters
     st.session_state.max_pages = st.slider("Max Pages", 1, 50, st.session_state.max_pages)
@@ -605,7 +559,7 @@ with st.sidebar:
         if st.button("Test URL Match", key="test_btn"):
             if url:
                 test_url_matching(url)
-            else:
+        else:
                 st.error("Please enter a URL")
     
     st.markdown('</div>', unsafe_allow_html=True)
@@ -630,13 +584,18 @@ with st.sidebar:
 # Main Chat Interface
 st.markdown('<div class="main-content">', unsafe_allow_html=True)
 
-# Header
-st.markdown("""
-<div class="main-header">
-    <h1>🤖 TalkDocs2</h1>
-    <p>AI-Powered Web Crawler & Document Chat</p>
-</div>
-""", unsafe_allow_html=True)
+# Header with sidebar toggle
+col1, col2 = st.columns([1, 4])
+with col1:
+    if st.button("☰", help="Toggle Sidebar"):
+        st.sidebar.toggle()
+with col2:
+    st.markdown("""
+    <div class="main-header">
+        <h1>🤖 TalkDocs2</h1>
+        <p>AI-Powered Web Crawler & Document Chat</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Chat Container
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
@@ -659,7 +618,7 @@ if prompt := st.chat_input("Ask me about the crawled documents..."):
     else:
         # Generate response
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
+        with st.spinner("Thinking..."):
                 response = st.session_state.chatbot.chat(prompt)
             st.markdown(response)
     
