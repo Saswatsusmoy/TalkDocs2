@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+requests
+beautifulsoup4
+lxml
+chromadb
+fastembed
+python-multipart
+pydantic
+aiohttp
+asyncio-throttle
+tqdm
+python-dotenv
