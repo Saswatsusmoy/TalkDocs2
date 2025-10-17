@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check, Code, Terminal } from 'lucide-react'
+import MarkdownMessage from './MarkdownMessage'
 
 interface ChatMessageProps {
   message: {
@@ -9,6 +9,11 @@ interface ChatMessageProps {
     content: string
     role: 'user' | 'assistant'
     timestamp: Date
+    sources?: Array<{
+      title: string
+      url: string
+      similarity_score?: number
+    }>
   }
 }
 
@@ -21,56 +26,25 @@ export default function ChatMessage({ message }: ChatMessageProps) {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const formatCodeBlocks = (content: string) => {
-    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g
-    const parts = []
-    let lastIndex = 0
-    let match
-
-    while ((match = codeBlockRegex.exec(content)) !== null) {
-      // Add text before code block
-      if (match.index > lastIndex) {
-        parts.push({
-          type: 'text',
-          content: content.slice(lastIndex, match.index)
-        })
-      }
-
-      // Add code block
-      parts.push({
-        type: 'code',
-        language: match[1] || 'text',
-        content: match[2]
-      })
-
-      lastIndex = match.index + match[0].length
-    }
-
-    // Add remaining text
-    if (lastIndex < content.length) {
-      parts.push({
-        type: 'text',
-        content: content.slice(lastIndex)
-      })
-    }
-
-    return parts.length > 0 ? parts : [{ type: 'text', content }]
-  }
-
-  const messageParts = formatCodeBlocks(message.content)
-
   return (
     <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div className={`message-bubble ${message.role === 'user' ? 'user-message' : 'assistant-message'} max-w-3xl`}>
-        {message.role === 'assistant' && (
-          <div className="flex items-center gap-2 mb-2 text-xs text-gray-400">
-            <Terminal className="w-4 h-4" />
-            <span>AI Assistant</span>
-            <span className="text-gray-500">
-              {message.timestamp.toLocaleTimeString()}
-            </span>
-          </div>
-        )}
+        <div className={`message-bubble ${message.role === 'user' ? 'user-message' : 'assistant-message'} max-w-3xl`}>
+          {message.role === 'assistant' && (
+            <div className="flex items-center justify-between mb-2 text-xs text-gray-400">
+              <div className="flex items-center gap-2">
+                <span>AI Assistant</span>
+                <span className="text-gray-500">
+                  {message.timestamp.toLocaleTimeString()}
+                </span>
+              </div>
+              <button
+                onClick={copyToClipboard}
+                className="px-2 py-1 text-xs text-gray-400 hover:text-white"
+              >
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          )}
         
         {message.role === 'user' && (
           <div className="flex items-center gap-2 mb-2 text-xs text-blue-300">
@@ -81,49 +55,44 @@ export default function ChatMessage({ message }: ChatMessageProps) {
           </div>
         )}
 
-        <div className="space-y-3">
-          {messageParts.map((part, index) => (
-            <div key={index}>
-              {part.type === 'text' ? (
-                <div className="whitespace-pre-wrap leading-relaxed">
-                  {part.content}
+        {/* Message content with proper formatting */}
+        {message.role === 'assistant' ? (
+          <div className="space-y-3">
+            <MarkdownMessage content={message.content} role={message.role} />
+          </div>
+        ) : (
+          <div className="whitespace-pre-wrap leading-relaxed text-terminal-text">
+            {message.content}
+          </div>
+        )}
+
+        {/* Sources section for assistant messages */}
+        {message.role === 'assistant' && message.sources && message.sources.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-gray-700">
+            <div className="text-xs text-gray-400 mb-2">Sources:</div>
+            <div className="space-y-1">
+              {message.sources.map((source, index) => (
+                <div key={index} className="flex items-center gap-2 text-xs">
+                  <span className="text-gray-500">•</span>
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 transition-colors truncate"
+                    title={source.title}
+                  >
+                    {source.title}
+                  </a>
+                  {source.similarity_score && (
+                    <span className="text-gray-500">
+                      ({(source.similarity_score * 100).toFixed(0)}%)
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <div className="relative">
-                  <div className="flex items-center justify-between bg-gray-800 px-3 py-2 rounded-t-md border-b border-gray-700">
-                    <div className="flex items-center gap-2">
-                      <Code className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-300 font-mono">
-                        {part.language}
-                      </span>
-                    </div>
-                    <button
-                      onClick={copyToClipboard}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors"
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="w-3 h-3" />
-                          Copied
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          Copy
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <pre className="code-block rounded-b-md">
-                    <code className={`language-${part.language}`}>
-                      {part.content}
-                    </code>
-                  </pre>
-                </div>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )

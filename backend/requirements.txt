@@ -11,3 +11,4 @@ aiohttp
 asyncio-throttle
 tqdm
 python-dotenv
+google-generativeai

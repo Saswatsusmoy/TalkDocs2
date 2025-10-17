@@ -5,13 +5,18 @@ import ChatMessage from './ChatMessage'
 import ChatInput from './ChatInput'
 import SettingsModal from './SettingsModal'
 import ThemeToggle from './ThemeToggle'
-import { Bot, User, Trash2, Download, Settings } from 'lucide-react'
+import { Bot, Settings } from 'lucide-react'
 
 interface Message {
   id: string
   content: string
   role: 'user' | 'assistant'
   timestamp: Date
+  sources?: Array<{
+    title: string
+    url: string
+    similarity_score?: number
+  }>
 }
 
 export default function ChatContainer() {
@@ -46,17 +51,58 @@ export default function ChatContainer() {
     setMessages(prev => [...prev, userMessage])
     setIsLoading(true)
 
-    // Simulate AI response (replace with actual API call)
-    setTimeout(() => {
+    try {
+      // Prepare conversation history for the API (limit to last 20 messages for optimal context)
+      // This ensures we don't exceed token limits while maintaining conversational continuity
+      const recentMessages = messages.slice(-20)
+      const conversationHistory = recentMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }))
+
+      // Call the backend chat API
+      const response = await fetch('http://localhost:8000/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content,
+          conversation_history: conversationHistory
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `I received your message: "${content}". This is a simulated response. In a real implementation, this would connect to your AI backend.`,
+        content: data.response,
+        role: 'assistant',
+        timestamp: new Date(),
+        sources: data.sources?.map((source: any) => ({
+          title: source.title || 'Untitled',
+          url: source.url || '',
+          similarity_score: source.similarity_score
+        }))
+      }
+      
+      setMessages(prev => [...prev, assistantMessage])
+    } catch (error) {
+      console.error('Error sending message:', error)
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Sorry, I encountered an error while processing your request: ${error instanceof Error ? error.message : 'Unknown error'}. Please make sure the backend server is running and try again.`,
         role: 'assistant',
         timestamp: new Date()
       }
-      setMessages(prev => [...prev, assistantMessage])
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
       setIsLoading(false)
-    }, 1500)
+    }
   }
 
   const clearChat = () => {
@@ -96,20 +142,16 @@ export default function ChatContainer() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-terminal-border bg-header-bg">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Bot className="w-6 h-6 text-terminal-green" />
-            <h1 className="text-xl font-bold text-terminal-text">TalkDocs AI</h1>
-          </div>
+          <h1 className="text-xl font-bold text-terminal-text">TalkDocs AI</h1>
         </div>
         
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-button-text hover:text-white transition-colors border border-terminal-border rounded-lg hover:border-button-hover"
+            className="px-3 py-2 text-sm text-button-text hover:text-white border border-terminal-border hover:border-button-hover"
           >
-            <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">Settings</span>
+            Settings
           </button>
         </div>
       </div>
@@ -124,9 +166,8 @@ export default function ChatContainer() {
           <div className="flex justify-start">
             <div className="message-bubble assistant-message max-w-3xl">
               <div className="flex items-center gap-2 mb-2 text-xs text-gray-400">
-                <Bot className="w-4 h-4" />
                 <span>AI Assistant</span>
-                <span className="text-gray-500">typing...</span>
+                <span className="text-gray-500">thinking</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="loading-dots text-terminal-green"></div>

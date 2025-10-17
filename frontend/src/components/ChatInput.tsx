@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, KeyboardEvent } from 'react'
-import { Send, Loader2, Download, Trash2 } from 'lucide-react'
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void
@@ -64,14 +63,9 @@ export default function ChatInput({ onSendMessage, isLoading, onExportChat, onCl
           <button
             onClick={handleSubmit}
             disabled={!message.trim() || isLoading}
-            className="btn-primary px-4 py-3 rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary px-4 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-            <span className="hidden sm:inline">Send</span>
+            {isLoading ? 'Sending...' : 'Send'}
           </button>
         </div>
         
@@ -79,17 +73,15 @@ export default function ChatInput({ onSendMessage, isLoading, onExportChat, onCl
         <div className="flex items-center justify-center gap-3 mt-3">
           <button
             onClick={onExportChat}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-button-text hover:text-white transition-colors border border-terminal-border rounded-lg hover:border-button-hover"
+            className="px-3 py-2 text-sm text-button-text hover:text-white border border-terminal-border hover:border-button-hover"
           >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export Chat</span>
+            Export Chat
           </button>
           <button
             onClick={onClearChat}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-button-text hover:text-red-400 transition-colors border border-terminal-border rounded-lg hover:border-red-500"
+            className="px-3 py-2 text-sm text-button-text hover:text-red-400 border border-terminal-border hover:border-red-500"
           >
-            <Trash2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Clear Chat</span>
+            Clear Chat
           </button>
         </div>
       </div>
