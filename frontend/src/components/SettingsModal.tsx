@@ -15,6 +15,13 @@ interface Source {
   description: string
 }
 
+interface ModelProvider {
+  provider: string
+  model_name: string
+  model_type: string
+  base_url?: string
+}
+
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [settings, setSettings] = useState({
     documentationUrl: '',
@@ -24,6 +31,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [isCrawling, setIsCrawling] = useState(false)
   const [sources, setSources] = useState<Source[]>([])
   const [isLoadingSources, setIsLoadingSources] = useState(false)
+  const [deletingSourceId, setDeletingSourceId] = useState<string | null>(null)
+  const [modelProvider, setModelProvider] = useState<ModelProvider | null>(null)
+  const [isLoadingProvider, setIsLoadingProvider] = useState(false)
+  const [isSwitchingProvider, setIsSwitchingProvider] = useState(false)
 
   const handleSave = () => {
     // TODO: Implement settings save functionality
@@ -46,6 +57,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       if (response.ok) {
         const sourcesData = await response.json()
         setSources(sourcesData)
+        setSettings(prev => {
+          if (prev.activeSourceId && !sourcesData.some((source: Source) => source.source_id === prev.activeSourceId)) {
+            return { ...prev, activeSourceId: '' }
+          }
+          return prev
+        })
       }
     } catch (error) {
       console.error('Failed to load sources:', error)
@@ -87,10 +104,83 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
   }
 
+  const handleDeleteSource = async (sourceId: string) => {
+    const confirmDelete = window.confirm('Are you sure you want to delete this documentation source? This will remove all associated data.')
+    if (!confirmDelete) {
+      return
+    }
+
+    setDeletingSourceId(sourceId)
+    try {
+      const response = await fetch(`http://localhost:8000/sources/${sourceId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete source: ${response.status}`)
+      }
+
+      if (settings.activeSourceId === sourceId) {
+        setSettings(prev => ({ ...prev, activeSourceId: '' }))
+      }
+
+      await loadSources()
+      alert('Source deleted successfully.')
+    } catch (error) {
+      console.error('Failed to delete source:', error)
+      alert('Failed to delete the selected documentation source. Please try again.')
+    } finally {
+      setDeletingSourceId(null)
+    }
+  }
+
+  const loadModelProvider = async () => {
+    setIsLoadingProvider(true)
+    try {
+      const response = await fetch('http://localhost:8000/model/provider')
+      if (response.ok) {
+        const providerData = await response.json()
+        setModelProvider(providerData)
+      }
+    } catch (error) {
+      console.error('Failed to load model provider:', error)
+    } finally {
+      setIsLoadingProvider(false)
+    }
+  }
+
+  const setProvider = async (provider: string) => {
+    setIsSwitchingProvider(true)
+    try {
+      const response = await fetch('http://localhost:8000/model/provider', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ provider })
+      })
+      
+      if (response.ok) {
+        const providerData = await response.json()
+        setModelProvider(providerData)
+        alert(`Model provider switched to ${providerData.model_type}`)
+      } else {
+        const errorData = await response.json()
+        alert(`Failed to switch provider: ${errorData.detail || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Failed to set model provider:', error)
+      alert('Failed to switch model provider. Please try again.')
+    } finally {
+      setIsSwitchingProvider(false)
+    }
+  }
+
   useEffect(() => {
     if (isOpen) {
       loadSources()
       loadActiveSource()
+      loadModelProvider()
     }
   }, [isOpen])
 
@@ -204,6 +294,73 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
           </div>
 
+          {/* Model Provider Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-lg font-semibold text-terminal-text">AI Model Provider</h3>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Current Model Provider
+                </label>
+                {isLoadingProvider ? (
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Loading...</div>
+                ) : modelProvider ? (
+                  <div className="bg-gray-100 dark:bg-gray-800/50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium text-terminal-text">
+                          {modelProvider.model_type}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          Model: {modelProvider.model_name}
+                          {modelProvider.base_url && ` • ${modelProvider.base_url}`}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-600 dark:text-gray-400">No provider information available</div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Switch Model Provider
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setProvider('lm_studio')}
+                    disabled={isSwitchingProvider || modelProvider?.provider === 'lm_studio'}
+                    className={`flex-1 px-4 py-2 text-sm rounded-lg ${
+                      modelProvider?.provider === 'lm_studio'
+                        ? 'bg-terminal-green text-white'
+                        : 'bg-gray-600 text-white hover:bg-gray-500 dark:hover:bg-gray-500'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {isSwitchingProvider && modelProvider?.provider !== 'lm_studio' ? 'Switching...' : 'LM Studio (Local)'}
+                  </button>
+                  <button
+                    onClick={() => setProvider('gemini')}
+                    disabled={isSwitchingProvider || modelProvider?.provider === 'gemini'}
+                    className={`flex-1 px-4 py-2 text-sm rounded-lg ${
+                      modelProvider?.provider === 'gemini'
+                        ? 'bg-terminal-green text-white'
+                        : 'bg-gray-600 text-white hover:bg-gray-500 dark:hover:bg-gray-500'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {isSwitchingProvider && modelProvider?.provider !== 'gemini' ? 'Switching...' : 'Gemini API'}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-500 mt-1">
+                  Choose between local LM Studio model or Google Gemini API. Make sure LM Studio is running for local models, or set GEMINI_API_KEY for Gemini.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Source Selection Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
@@ -265,16 +422,25 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             {source.document_count} documents • Created {new Date(source.created_at).toLocaleDateString()}
                           </div>
                         </div>
-                               <button
-                                 onClick={() => setActiveSource(source.source_id)}
-                                 className={`px-3 py-1 text-xs ${
-                                   settings.activeSourceId === source.source_id
-                                     ? 'bg-terminal-green text-white'
-                                     : 'bg-gray-600 text-white hover:bg-gray-500 dark:hover:bg-gray-500'
-                                 }`}
-                               >
-                                 {settings.activeSourceId === source.source_id ? 'Active' : 'Select'}
-                               </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setActiveSource(source.source_id)}
+                            className={`px-3 py-1 text-xs ${
+                              settings.activeSourceId === source.source_id
+                                ? 'bg-terminal-green text-white'
+                                : 'bg-gray-600 text-white hover:bg-gray-500 dark:hover:bg-gray-500'
+                            }`}
+                          >
+                            {settings.activeSourceId === source.source_id ? 'Active' : 'Select'}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSource(source.source_id)}
+                            disabled={deletingSourceId === source.source_id}
+                            className="px-3 py-1 text-xs bg-red-600 text-white hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {deletingSourceId === source.source_id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

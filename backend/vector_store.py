@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import os
 from datetime import datetime
 import json
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -235,9 +236,27 @@ class VectorStore:
             # If source_id is provided, switch to that source
             if source_id and source_id != self.current_source_id:
                 await self.set_active_source(source_id)
-            elif not self.collection:
-                # If no active source, initialize with default
+            elif not self.client:
+                # Initialize client if not already done
                 await self.initialize()
+            
+            # If we have an active source but collection doesn't match, set it
+            if self.current_source_id:
+                collection_name = self._get_collection_name(self.current_source_id)
+                if not self.collection or self.collection.name != collection_name:
+                    await self.set_active_source(self.current_source_id)
+            elif not self.collection:
+                # No active source, use default collection
+                if not self.client:
+                    await self.initialize()
+                else:
+                    try:
+                        self.collection = self.client.get_collection(name=self.collection_name)
+                    except Exception:
+                        self.collection = self.client.create_collection(
+                            name=self.collection_name,
+                            metadata={"description": "TalkDocs2 documentation collection"}
+                        )
             
             if not self.collection:
                 logger.warning("No active collection for search")
@@ -276,18 +295,52 @@ class VectorStore:
             raise
     
     async def clear_all(self):
-        """Clear all documents from the collection"""
-        if not self.collection:
-            await self.initialize()
-        
+        """Clear all documents from all collections and local storage"""
         try:
-            # Delete the collection and recreate it
-            self.client.delete_collection(name=self.collection_name)
+            if not self.client:
+                await self.initialize()
+            
+            # Get all collections
+            collections = self.client.list_collections()
+            
+            # Delete all source-specific collections
+            deleted_count = 0
+            for collection in collections:
+                try:
+                    # Delete all collections (both default and source-specific)
+                    self.client.delete_collection(name=collection.name)
+                    deleted_count += 1
+                    logger.info(f"Deleted collection: {collection.name}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete collection {collection.name}: {str(e)}")
+            
+            # Also try to delete the default collection if it exists
+            try:
+                self.client.delete_collection(name=self.collection_name)
+                deleted_count += 1
+            except Exception:
+                pass  # Collection might not exist
+            
+            # Clear local document files
+            if os.path.exists(self.documents_directory):
+                try:
+                    shutil.rmtree(self.documents_directory)
+                    os.makedirs(self.documents_directory, exist_ok=True)
+                    logger.info("Cleared local document files")
+                except Exception as e:
+                    logger.warning(f"Failed to clear local documents: {str(e)}")
+            
+            # Reset current source and collection
+            self.current_source_id = None
+            self.collection = None
+            
+            # Recreate default collection
             self.collection = self.client.create_collection(
                 name=self.collection_name,
                 metadata={"description": "TalkDocs2 documentation collection"}
             )
-            logger.info("Vector database cleared successfully")
+            
+            logger.info(f"Cleared {deleted_count} collections and all local documents")
             
         except Exception as e:
             logger.error(f"Failed to clear database: {str(e)}")
@@ -497,6 +550,46 @@ class VectorStore:
             
         except Exception as e:
             logger.error(f"Failed to create backup: {str(e)}")
+            raise
+    
+    async def delete_source(self, source_id: str):
+        """Delete a source's vector collection and stored documents"""
+        try:
+            if not self.client:
+                await self.initialize()
+            
+            collection_name = self._get_collection_name(source_id)
+            
+            # Delete collection from ChromaDB
+            try:
+                self.client.delete_collection(name=collection_name)
+                logger.info(f"Deleted collection for source {source_id}")
+            except Exception as e:
+                logger.warning(f"Failed to delete collection {collection_name}: {str(e)}")
+            
+            # Remove stored documents directory
+            source_dir = os.path.join(self.documents_directory, source_id)
+            if os.path.exists(source_dir):
+                shutil.rmtree(source_dir, ignore_errors=True)
+                logger.info(f"Removed documents directory for source {source_id}")
+            
+            # Remove source index file
+            index_file = os.path.join(self.documents_directory, f"{source_id}_index.json")
+            if os.path.exists(index_file):
+                try:
+                    os.remove(index_file)
+                    logger.info(f"Removed index file for source {source_id}")
+                except OSError as e:
+                    logger.warning(f"Failed to remove index file for source {source_id}: {str(e)}")
+            
+            # Reset active source if it was deleted
+            if self.current_source_id == source_id:
+                self.current_source_id = None
+                self.collection = None
+                logger.info(f"Active source reset because {source_id} was deleted")
+        
+        except Exception as e:
+            logger.error(f"Failed to delete source {source_id}: {str(e)}")
             raise
     
     def __del__(self):

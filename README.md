@@ -65,6 +65,140 @@ The backend will run on http://localhost:8000 and the frontend on http://localho
 **Managing multiple sources:**
 You can crawl multiple documentation sites and switch between them. Each source is kept separate, so you won't get mixed results from different docs.
 
+## Command Line Interface (CLI)
+
+TalkDocs2 includes a powerful CLI for terminal-based interaction. After installing dependencies, you can use it from the backend directory:
+
+### Basic Usage
+
+**Interactive Mode (Default):**
+```bash
+cd backend
+python cli.py
+```
+
+This launches an interactive menu that stays open until you choose to exit. You can navigate through all features using the menu.
+
+**Command Mode:**
+```bash
+python cli.py --help
+python cli.py crawl https://docs.example.com
+python cli.py chat "What is MLX?"
+```
+
+You can also use individual commands directly without entering interactive mode.
+
+### Interactive Menu
+
+When you run `python cli.py` without any arguments, you'll see an interactive menu:
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║           TalkDocs2 - Documentation Chatbot           ║
+╚═══════════════════════════════════════════════════════════╝
+
+Main Menu:
+
+  1.  Chat with Documentation (Interactive)
+  2.  Chat with Documentation (Single Query)
+  3.  Crawl Website
+  4.  Manage Sources
+  5.  Search Documents
+  6.  Manage AI Provider
+  7.  View Statistics
+  8.  Clear Database
+  9.  Exit
+```
+
+Simply select a number to access that feature. The menu will return after each operation, allowing you to perform multiple tasks in one session. Press `Ctrl+C` or select option 9 to exit.
+
+### Commands
+
+**Crawl a website:**
+```bash
+python cli.py crawl https://docs.example.com --depth 3 --pages 100
+```
+
+**Chat with documentation (single query):**
+```bash
+python cli.py chat "What is MLX?"
+```
+
+**Interactive chat mode:**
+```bash
+python cli.py chat --interactive
+```
+
+**List all sources:**
+```bash
+python cli.py sources
+```
+
+**Set active source:**
+```bash
+python cli.py sources --set source_example_com
+```
+
+**Delete a source:**
+```bash
+python cli.py sources --delete source_example_com
+```
+
+**Search documents:**
+```bash
+python cli.py search "machine learning" --limit 10
+```
+
+**Manage AI model provider:**
+```bash
+# Get current provider
+python cli.py provider --get
+
+# Switch to Gemini
+python cli.py provider --set gemini
+
+# Switch to LM Studio
+python cli.py provider --set lm_studio
+```
+
+**View system statistics:**
+```bash
+python cli.py stats
+```
+
+**Clear all data:**
+```bash
+python cli.py clear
+```
+
+### CLI Options
+
+- `crawl <url>` - Crawl and index a website
+  - `--depth, -d` - Maximum crawl depth (default: 3)
+  - `--pages, -p` - Maximum pages to crawl (default: 100)
+  - `--delay` - Delay between requests in seconds (default: 1.0)
+
+- `chat [query]` - Chat with documentation
+  - `--interactive, -i` - Start interactive chat mode
+  - `--source, -s` - Source ID to use
+
+- `sources` - Manage documentation sources
+  - `--list, -l` - List all sources (default)
+  - `--set, -s <id>` - Set active source
+  - `--delete, -d <id>` - Delete a source
+
+- `provider` - Manage AI model provider
+  - `--get, -g` - Get current provider
+  - `--set, -s <provider>` - Set provider (lm_studio or gemini)
+
+- `search <query>` - Search documents
+  - `--limit, -l` - Number of results (default: 10)
+  - `--source, -s` - Source ID to search
+
+- `stats` - Show system statistics
+
+- `clear` - Clear all documents (with confirmation)
+
 ## API Reference
 
 The backend provides a REST API for programmatic access:

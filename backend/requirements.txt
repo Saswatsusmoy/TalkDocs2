@@ -11,4 +11,9 @@ aiohttp
 asyncio-throttle
 tqdm
 python-dotenv
+openai
 google-generativeai
+sentence-transformers
+torch
+typer
+rich

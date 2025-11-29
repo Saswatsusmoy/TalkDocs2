@@ -26,14 +26,19 @@ app.add_middleware(
 
 # Initialize components
 vector_store = VectorStore()
-crawler = WebCrawler(vector_store=vector_store)
+crawler = WebCrawler(
+    vector_store=vector_store,
+    persistence_workers=3,  # Parallel document storage
+    max_concurrent_requests=10,  # Concurrent HTTP requests
+    parse_workers=4  # Thread pool for HTML parsing
+)
 rag_chat = None  # Will be initialized after vector_store
 
 class CrawlRequest(BaseModel):
     url: str
     max_depth: Optional[int] = 3
-    max_pages: Optional[int] = 100
-    delay: Optional[float] = 1.0
+    max_pages: Optional[int] = 1000
+    delay: Optional[float] = 0.3
 
 class CrawlResponse(BaseModel):
     success: bool
@@ -77,6 +82,9 @@ class SourceResponse(BaseModel):
 class SetSourceRequest(BaseModel):
     source_id: str
 
+class SetProviderRequest(BaseModel):
+    provider: str  # 'lm_studio' or 'gemini'
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize the RAG chat service on startup"""
@@ -118,11 +126,6 @@ async def crawl_website(request: CrawlRequest):
         
         new_pages = crawl_results.get('new_pages', [])
         existing_documents = crawl_results.get('existing_documents', [])
-        
-        # Store only new pages in vector database with source URL
-        if new_pages:
-            await vector_store.store_documents(new_pages, source_url=request.url)
-            logger.info(f"Stored {len(new_pages)} new pages in vector database for source: {request.url}")
         
         # Calculate total content length (new + existing)
         new_content_length = sum(len(page.get('content', '')) for page in new_pages)
@@ -192,6 +195,21 @@ async def set_active_source(request: SetSourceRequest):
         logger.error(f"Failed to set active source: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to set active source: {str(e)}")
 
+@app.delete("/sources/{source_id}")
+async def delete_source(source_id: str):
+    """
+    Delete a documentation source and its stored data
+    """
+    try:
+        await vector_store.delete_source(source_id)
+        return {
+            "message": f"Source {source_id} deleted successfully",
+            "source_id": source_id
+        }
+    except Exception as e:
+        logger.error(f"Failed to delete source {source_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete source: {str(e)}")
+
 @app.get("/sources/active")
 async def get_active_source():
     """
@@ -205,6 +223,50 @@ async def get_active_source():
     except Exception as e:
         logger.error(f"Failed to get active source: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get active source: {str(e)}")
+
+@app.get("/model/provider")
+async def get_model_provider():
+    """
+    Get the currently active model provider
+    """
+    try:
+        if not rag_chat:
+            raise HTTPException(status_code=503, detail="RAG Chat Service not initialized")
+        return {
+            "provider": rag_chat.provider,
+            "model_name": rag_chat.model_name,
+            "model_type": "Gemini API" if rag_chat.provider == "gemini" else "LM Studio (Local)",
+            "base_url": rag_chat.base_url if rag_chat.provider == "lm_studio" else None
+        }
+    except Exception as e:
+        logger.error(f"Failed to get model provider: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get model provider: {str(e)}")
+
+@app.post("/model/provider")
+async def set_model_provider(request: SetProviderRequest):
+    """
+    Set the model provider (lm_studio or gemini)
+    """
+    try:
+        if not rag_chat:
+            raise HTTPException(status_code=503, detail="RAG Chat Service not initialized")
+        
+        if request.provider not in ['lm_studio', 'gemini']:
+            raise HTTPException(status_code=400, detail="Provider must be 'lm_studio' or 'gemini'")
+        
+        rag_chat.set_provider(request.provider)
+        return {
+            "message": f"Model provider set to: {request.provider}",
+            "provider": rag_chat.provider,
+            "model_name": rag_chat.model_name,
+            "model_type": "Gemini API" if rag_chat.provider == "gemini" else "LM Studio (Local)"
+        }
+    except ValueError as e:
+        logger.error(f"Failed to set model provider: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to set model provider: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to set model provider: {str(e)}")
 
 @app.get("/search")
 async def search_documents(query: str, limit: int = 10, source_id: Optional[str] = None):
@@ -256,11 +318,11 @@ async def chat_with_rag(request: ChatRequest):
                 })
             logger.info(f"Using {len(conversation_history)} previous messages for context")
         
-        # Generate response using RAG
+        # Generate response using RAG with re-ranking
         result = await rag_chat.generate_response(
             user_message=request.message,
             conversation_history=conversation_history,
-            max_context_docs=5
+            max_context_docs=10
         )
         
         return ChatResponse(
